@@ -27,11 +27,10 @@ class DaemonClass
     /*Массив идентификаторов процессов воркеров.*/
     private $currentJobs = [];
 
-    public function __construct()
+    public function __construct(callable $worker)
     {
         Log::w(time() . ": Запуск контроллера");
-        $this->worker = function ($WorkerConfig) {
-        };
+        $this->worker = $worker;
         pcntl_signal(SIGTERM, array($this, "childSignalHandler"));
         pcntl_signal(SIGCHLD, array($this, "childSignalHandler"));
     }

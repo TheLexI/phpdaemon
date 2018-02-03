@@ -40,7 +40,15 @@ $STDERR = fopen($baseDir . '/daemon.log', 'ab');
 declare(ticks=1);
 pcntl_signal_dispatch();
 
-$daemon = new DaemonClass();
+$daemon = new DaemonClass(
+    function ($config) {
+        /*@todo тело демона, выполняющее полезную работу*/
+        var_dump($config);
+
+        gc_collect_cycles();
+        exit();
+    }
+);
 /*
  * Дальше можно настроить демон по желанию
  * $daemon         TRUE|FALSE   -  Редим работы (F - очередь, T - Демон)
@@ -50,13 +58,6 @@ $daemon = new DaemonClass();
  * В случае демона, после завершения работы воркера, он будет перезапущен
  * В случае очереди, после отработки всех переданных параметров скрипт остановится.
  * */
-$daemon->worker = function ($config) {
-    /*@todo тело демона, выполняющее полезную работу*/
-    var_dump($config);
-
-    gc_collect_cycles();
-    exit();
-};
 
 /*запускаем обработку очереди, вызовом метода run c предачей элемента очереди*/
 foreach ([1, 2, 3, 4, 5, 6, 7, 8] as $source) {

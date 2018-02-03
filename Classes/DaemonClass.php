@@ -15,22 +15,16 @@ pcntl_signal_dispatch();
 
 class DaemonClass
 {
+    public $workerConfig = null;
     /*По умолчанию в режиме обработчика очереди*/
-    public $daemon = false;
-    /*Максимальное количество воркеров (количество потоков в которые отрабатывается очередь)*/
-    public $maxProcesses = 1;
-    /*Время ожидания перед попыткой запуска очередного потока, если все воркеры заняты*/
-    public $sleepTime = 10;
-    /*Функция воркера - тело демона, несущее полезную нагрузку на вход принимает параметр переданный в run */
-    public $worker;
     private $stop_server = false;
     /*Массив идентификаторов процессов воркеров.*/
     private $currentJobs = [];
 
-    public function __construct(callable $worker)
+    public function __construct(WorkerConfig $worker)
     {
         Log::w(time() . ": Запуск контроллера");
-        $this->worker = $worker;
+        $this->workerConfig = $worker;
         pcntl_signal(SIGTERM, array($this, "childSignalHandler"));
         pcntl_signal(SIGCHLD, array($this, "childSignalHandler"));
     }
@@ -42,17 +36,17 @@ class DaemonClass
         // Пока $stop_server не установится в TRUE, гоняем бесконечный цикл
         while (!$this->stop_server) {
             // Если уже запущено максимальное количество дочерних процессов, ждем их завершения
-            while (count($this->currentJobs) >= $this->maxProcesses) {
+            while (count($this->currentJobs) >= $this->workerConfig->maxProcesses) {
                 if (!$alreadySay) {
                     $alreadySay = true;
                     Log::w(time() . ": Запущено максимально процессов. Ожидаем! ..");
                 }
-                sleep($this->sleepTime);
+                sleep($this->workerConfig->sleepTime);
             }
             if (!$this->stop_server) $this->launchJob($WorkerConfig);
 
             /*В режиме очереди, после окончания обработки данных, выходим из цикла*/
-            if (!$this->daemon) break;
+            if (!$this->workerConfig->daemon) break;
         }
     }
 
@@ -72,7 +66,7 @@ class DaemonClass
         } else {
             // А этот код выполнится дочерним процессом
             Log::w(time() . ": Запускаю воркер с ID " . getmypid());
-            ($this->worker)($WorkerConfig);
+            ($this->workerConfig->worker)($WorkerConfig);
             exit();
         }
         return TRUE;
